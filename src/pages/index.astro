@@ -1,13 +1,16 @@
 ---
-import { stops } from '../scripts/stops';
-import '../styles/app.css';
+import { stops } from "../scripts/stops";
+import "../styles/app.css";
 ---
 
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
     <meta name="description" content="Next departures at your stops" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Stops</title>
@@ -15,11 +18,13 @@ import '../styles/app.css';
   <body>
     <div class="app">
       <nav class="tabs" id="tabs">
-        {stops.map((stop, i) => (
-          <div class={`tab ${i === 0 ? 'active' : ''}`} data-id={stop.id}>
-            {stop.name}
-          </div>
-        ))}
+        {
+          stops.map((stop, i) => (
+            <div class={`tab ${i === 0 ? "active" : ""}`} data-id={stop.id}>
+              {stop.name}
+            </div>
+          ))
+        }
       </nav>
       <div class="slides-wrapper">
         <div class="ptr animating" id="ptr">
@@ -27,20 +32,45 @@ import '../styles/app.css';
           <span class="ptr-text">Pull to refresh</span>
         </div>
         <div class="slides" id="slides">
-          {stops.map((stop) => (
-            <div class="slide" data-stop-id={stop.id}>
-              <div class="loading"><div class="spinner"></div>Loading…</div>
-            </div>
-          ))}
+          {
+            stops.map((stop) => (
+              <div class="slide" data-stop-id={stop.id}>
+                <div class="loading">
+                  <div class="spinner" />
+                  Loading…
+                </div>
+              </div>
+            ))
+          }
         </div>
       </div>
     </div>
 
+    <button class="locate-btn" id="locateBtn" aria-label="Sort by nearest stop">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="26"
+        height="26"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <circle cx="12" cy="12" r="4"></circle>
+        <line x1="12" y1="2" x2="12" y2="6"></line>
+        <line x1="12" y1="18" x2="12" y2="22"></line>
+        <line x1="2" y1="12" x2="6" y2="12"></line>
+        <line x1="18" y1="12" x2="22" y2="12"></line>
+      </svg>
+    </button>
+
     <script define:vars={{ stops }}>
-      const slidesEl = document.getElementById('slides');
-      const tabsEl = document.getElementById('tabs');
-      const ptr = document.getElementById('ptr');
-      const ptrText = ptr.querySelector('.ptr-text');
+      const slidesEl = document.getElementById("slides");
+      const tabsEl = document.getElementById("tabs");
+      const ptr = document.getElementById("ptr");
+      const ptrText = ptr.querySelector(".ptr-text");
 
       let order = stops.slice();
       let current = 0;
@@ -65,23 +95,29 @@ import '../styles/app.css';
 
       function updateActiveTab() {
         const id = order[current].id;
-        [...tabsEl.children].forEach((t) => t.classList.toggle('active', t.dataset.id === id));
+        [...tabsEl.children].forEach((t) =>
+          t.classList.toggle("active", t.dataset.id === id),
+        );
       }
 
       function centerTab(id) {
         const tab = tabById(id);
         if (!tab) return;
-        const target = tab.offsetLeft - (tabsEl.clientWidth - tab.offsetWidth) / 2;
+        const target =
+          tab.offsetLeft - (tabsEl.clientWidth - tab.offsetWidth) / 2;
         const max = tabsEl.scrollWidth - tabsEl.clientWidth;
-        tabsEl.scrollTo({ left: Math.max(0, Math.min(target, max)), behavior: 'smooth' });
+        tabsEl.scrollTo({
+          left: Math.max(0, Math.min(target, max)),
+          behavior: "smooth",
+        });
       }
 
       function setSlideTransform(idx, instant) {
         if (instant) {
-          slidesEl.style.transition = 'none';
+          slidesEl.style.transition = "none";
           slidesEl.style.transform = `translateX(-${idx * 100}%)`;
           void slidesEl.offsetWidth;
-          slidesEl.style.transition = '';
+          slidesEl.style.transition = "";
         } else {
           slidesEl.style.transform = `translateX(-${idx * 100}%)`;
         }
@@ -96,7 +132,7 @@ import '../styles/app.css';
       }
 
       [...tabsEl.children].forEach((tab) => {
-        tab.addEventListener('click', () => {
+        tab.addEventListener("click", () => {
           const idx = order.findIndex((s) => s.id === tab.dataset.id);
           if (idx >= 0) goTo(idx);
         });
@@ -110,13 +146,14 @@ import '../styles/app.css';
         const lat1 = toRad(a[1]);
         const lat2 = toRad(b[1]);
         const h =
-          Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+          Math.sin(dLat / 2) ** 2 +
+          Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
         return 2 * R * Math.asin(Math.sqrt(h));
       }
 
       function saveLastPos(me) {
         try {
-          localStorage.setItem('freqstops:pos', JSON.stringify(me));
+          localStorage.setItem("freqstops:pos", JSON.stringify(me));
         } catch (e) {
           /* ignore */
         }
@@ -124,7 +161,7 @@ import '../styles/app.css';
 
       function readLastPos() {
         try {
-          const p = JSON.parse(localStorage.getItem('freqstops:pos'));
+          const p = JSON.parse(localStorage.getItem("freqstops:pos"));
           return Array.isArray(p) && p.length === 2 ? p : null;
         } catch (e) {
           return null;
@@ -133,7 +170,8 @@ import '../styles/app.css';
 
       function getPosition() {
         return new Promise((resolve, reject) => {
-          if (!navigator.geolocation) return reject(new Error('no geolocation'));
+          if (!navigator.geolocation)
+            return reject(new Error("no geolocation"));
           navigator.geolocation.getCurrentPosition(
             (pos) => {
               const me = [pos.coords.longitude, pos.coords.latitude];
@@ -169,24 +207,27 @@ import '../styles/app.css';
         }
 
         const first = new Map();
-        [...tabsEl.children].forEach((el) => first.set(el, el.getBoundingClientRect().left));
+        [...tabsEl.children].forEach((el) =>
+          first.set(el, el.getBoundingClientRect().left),
+        );
         doReorder();
         [...tabsEl.children].forEach((el) => {
           const prevLeft = first.get(el);
           if (prevLeft == null) return;
           const dx = prevLeft - el.getBoundingClientRect().left;
           if (!dx) return;
-          el.style.transition = 'none';
+          el.style.transition = "none";
           el.style.transform = `translateX(${dx}px)`;
           requestAnimationFrame(() => {
-            el.style.transition = 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-            el.style.transform = '';
+            el.style.transition =
+              "transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
+            el.style.transform = "";
           });
           el.addEventListener(
-            'transitionend',
+            "transitionend",
             () => {
-              el.style.transition = '';
-              el.style.transform = '';
+              el.style.transition = "";
+              el.style.transform = "";
             },
             { once: true },
           );
@@ -206,7 +247,10 @@ import '../styles/app.css';
 
         reorderDom(newOrder, animate);
         order = newOrder;
-        current = Math.max(0, order.findIndex((s) => s.id === currentId));
+        current = Math.max(
+          0,
+          order.findIndex((s) => s.id === currentId),
+        );
         setSlideTransform(current, true);
         updateActiveTab();
         centerTab(order[current].id);
@@ -231,7 +275,7 @@ import '../styles/app.css';
         loadDepartures(0);
       }
 
-      slidesEl.addEventListener('touchstart', (e) => {
+      slidesEl.addEventListener("touchstart", (e) => {
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
         deltaX = 0;
@@ -241,7 +285,7 @@ import '../styles/app.css';
       });
 
       slidesEl.addEventListener(
-        'touchmove',
+        "touchmove",
         (e) => {
           if (!isDragging) return;
           const dx = e.touches[0].clientX - startX;
@@ -249,15 +293,15 @@ import '../styles/app.css';
 
           if (!axis) {
             if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-            axis = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
-            if (axis === 'h') slidesEl.classList.add('dragging');
-            if (axis === 'v') {
-              ptr.classList.remove('animating');
-              curSlide().classList.add('pulling');
+            axis = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+            if (axis === "h") slidesEl.classList.add("dragging");
+            if (axis === "v") {
+              ptr.classList.remove("animating");
+              curSlide().classList.add("pulling");
             }
           }
 
-          if (axis === 'h') {
+          if (axis === "h") {
             deltaX = dx;
             const offset = -(current * window.innerWidth) + deltaX;
             slidesEl.style.transform = `translateX(${offset}px)`;
@@ -267,19 +311,21 @@ import '../styles/app.css';
             ptr.style.transform = `translateY(${pullY}px)`;
             curSlide().style.transform = `translateY(${pullY}px)`;
             const ready = pullY > 56;
-            ptr.classList.toggle('ready', ready);
-            ptrText.textContent = ready ? 'Release to refresh all' : 'Pull to refresh';
+            ptr.classList.toggle("ready", ready);
+            ptrText.textContent = ready
+              ? "Release to refresh all"
+              : "Pull to refresh";
           }
         },
         { passive: false },
       );
 
-      slidesEl.addEventListener('touchend', () => {
+      slidesEl.addEventListener("touchend", () => {
         if (!isDragging) return;
         isDragging = false;
-        slidesEl.classList.remove('dragging');
+        slidesEl.classList.remove("dragging");
 
-        if (axis === 'h') {
+        if (axis === "h") {
           if (Math.abs(deltaX) > 60) {
             if (deltaX < 0 && current < order.length - 1) goTo(current + 1);
             else if (deltaX > 0 && current > 0) goTo(current - 1);
@@ -287,8 +333,8 @@ import '../styles/app.css';
           } else {
             goTo(current);
           }
-        } else if (axis === 'v') {
-          curSlide().classList.remove('pulling');
+        } else if (axis === "v") {
+          curSlide().classList.remove("pulling");
           if (pullY > 56 && !refreshing) refreshAll();
           else resetPtr();
         }
@@ -299,30 +345,29 @@ import '../styles/app.css';
       });
 
       function resetPtr() {
-        ptr.classList.add('animating');
-        ptr.classList.remove('ready', 'refreshing');
-        ptr.style.transform = '';
-        ptrText.textContent = 'Pull to refresh';
+        ptr.classList.add("animating");
+        ptr.classList.remove("ready", "refreshing");
+        ptr.style.transform = "";
+        ptrText.textContent = "Pull to refresh";
         const cs = curSlide();
-        cs.classList.remove('pulling');
-        cs.style.transform = '';
+        cs.classList.remove("pulling");
+        cs.style.transform = "";
       }
 
       async function refreshAll() {
         refreshing = true;
-        ptr.classList.add('animating', 'refreshing');
-        ptr.classList.remove('ready');
-        ptr.style.transform = 'translateY(56px)';
+        ptr.classList.add("animating", "refreshing");
+        ptr.classList.remove("ready");
+        ptr.style.transform = "translateY(56px)";
         const cs = curSlide();
-        cs.classList.remove('pulling');
-        cs.style.transform = 'translateY(56px)';
-        ptrText.textContent = 'Refreshing…';
+        cs.classList.remove("pulling");
+        cs.style.transform = "translateY(56px)";
+        ptrText.textContent = "Refreshing…";
 
         for (const s of order) cache[s.id] = null;
         try {
           await Promise.all(order.map((s, i) => loadDepartures(i, true)));
-        } catch (e) {
-        }
+        } catch (e) {}
         await resortKeepingCurrent(true);
         refreshing = false;
         resetPtr();
@@ -338,8 +383,9 @@ import '../styles/app.css';
           return;
         }
 
-        if (!slide.querySelector('.dep-list')) {
-          slide.innerHTML = '<div class="loading"><div class="spinner"></div>Loading…</div>';
+        if (!slide.querySelector(".dep-list")) {
+          slide.innerHTML =
+            '<div class="loading"><div class="spinner"></div>Loading…</div>';
         }
 
         try {
@@ -348,7 +394,7 @@ import '../styles/app.css';
           cache[stop.id] = { data, time: Date.now() };
           render(slide, data, stop);
         } catch (e) {
-          if (!slide.querySelector('.dep-list')) {
+          if (!slide.querySelector(".dep-list")) {
             slide.innerHTML = '<div class="error">Failed to load</div>';
           }
         }
@@ -359,15 +405,26 @@ import '../styles/app.css';
       }
 
       function normLine(line) {
-        return String(line ?? '').trim().toUpperCase();
+        return String(line ?? "")
+          .trim()
+          .toUpperCase();
       }
 
-      const COMPASS = { N: 0, NE: 45, E: 90, SE: 135, S: 180, SW: 225, W: 270, NW: 315 };
+      const COMPASS = {
+        N: 0,
+        NE: 45,
+        E: 90,
+        SE: 135,
+        S: 180,
+        SW: 225,
+        W: 270,
+        NW: 315,
+      };
       const DIR_TOL = 65;
 
       function toBearing(v) {
         if (v == null) return null;
-        if (typeof v === 'number') return ((v % 360) + 360) % 360;
+        if (typeof v === "number") return ((v % 360) + 360) % 360;
         const key = String(v).trim().toUpperCase();
         return key in COMPASS ? COMPASS[key] : null;
       }
@@ -376,9 +433,9 @@ import '../styles/app.css';
         if (spec == null) return null;
         let to = spec;
         let tol = DIR_TOL;
-        if (typeof spec === 'object') {
+        if (typeof spec === "object") {
           to = spec.to;
-          if (typeof spec.tol === 'number') tol = spec.tol;
+          if (typeof spec.tol === "number") tol = spec.tol;
         }
         const bearing = toBearing(to);
         return bearing == null ? null : { bearing, tol };
@@ -391,15 +448,22 @@ import '../styles/app.css';
 
       function departTime(dep) {
         return dep.scheduledTime
-          ? new Date(dep.scheduledTime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-          : '';
+          ? new Date(dep.scheduledTime).toLocaleTimeString("de-DE", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "";
       }
 
       function badgeMarkup(dep) {
-        const badge = dep.badge || { background: '#4B5563', color: '#fff', shape: 'circle' };
-        const shapeClass = badge.shape === 'circle' ? 'circle' : 'rect';
-        const lineText = String(dep.line ?? '');
-        const lenClass = 'len-' + Math.min(lineText.length || 1, 4);
+        const badge = dep.badge || {
+          background: "#4B5563",
+          color: "#fff",
+          shape: "circle",
+        };
+        const shapeClass = badge.shape === "circle" ? "circle" : "rect";
+        const lineText = String(dep.line ?? "");
+        const lenClass = "len-" + Math.min(lineText.length || 1, 4);
         return `<div class="line-badge ${shapeClass} ${lenClass}" style="background:${badge.background};color:${badge.color}">${lineText}</div>`;
       }
 
@@ -410,47 +474,52 @@ import '../styles/app.css';
       function timeMarkup(dep) {
         const mins = dep.minutesUntil;
         const delay = Number(dep.delayTime) || 0;
-        const isCancelled = dep.state === 'Cancelled';
-        const timeStr = mins <= 0 ? 'now' : `${mins}<span class="unit">min</span>`;
-        const timeClass = mins <= 0 ? 'now' : '';
+        const isCancelled = dep.state === "Cancelled";
+        const timeStr =
+          mins <= 0 ? "now" : `${mins}<span class="unit">min</span>`;
+        const timeClass = mins <= 0 ? "now" : "";
 
         let delayHtml;
-        if (isCancelled) delayHtml = '<span class="dep-delay cancelled">Cancelled</span>';
-        else if (delay > 0) delayHtml = `<span class="dep-delay late">+${delay} min</span>`;
-        else if (delay < 0) delayHtml = `<span class="dep-delay early">${delay} min</span>`;
+        if (isCancelled)
+          delayHtml = '<span class="dep-delay cancelled">Cancelled</span>';
+        else if (delay > 0)
+          delayHtml = `<span class="dep-delay late">+${delay} min</span>`;
+        else if (delay < 0)
+          delayHtml = `<span class="dep-delay early">${delay} min</span>`;
         else delayHtml = '<span class="dep-delay ontime">on time</span>';
 
         return `<div class="dep-time ${timeClass}">${timeStr}</div>${delayHtml}`;
       }
 
       function updateNode(node, dep, isNew, highlight) {
-        node.classList.toggle('cancelled', dep.state === 'Cancelled');
-        node.classList.toggle('highlight', !!highlight);
+        node.classList.toggle("cancelled", dep.state === "Cancelled");
+        node.classList.toggle("highlight", !!highlight);
 
-        const departEl = node.querySelector('.dep-depart');
+        const departEl = node.querySelector(".dep-depart");
         if (departEl) {
           const t = departTime(dep);
           if (departEl.textContent !== t) departEl.textContent = t;
         }
 
-        const right = node.querySelector('.dep-right');
+        const right = node.querySelector(".dep-right");
         const sig = timeMarkup(dep);
         if (right.dataset.sig !== sig) {
           right.innerHTML = sig;
           right.dataset.sig = sig;
           if (!isNew) {
-            right.classList.remove('flash');
+            right.classList.remove("flash");
             void right.offsetWidth;
-            right.classList.add('flash');
+            right.classList.add("flash");
           }
         }
       }
 
       function createNode(dep, highlight) {
-        const node = document.createElement('div');
-        node.className = 'departure';
+        const node = document.createElement("div");
+        node.className = "departure";
         node.dataset.key = keyOf(dep);
-        node.innerHTML = badgeMarkup(dep) + infoMarkup(dep) + '<div class="dep-right"></div>';
+        node.innerHTML =
+          badgeMarkup(dep) + infoMarkup(dep) + '<div class="dep-right"></div>';
         updateNode(node, dep, true, highlight);
         return node;
       }
@@ -463,7 +532,9 @@ import '../styles/app.css';
           return;
         }
 
-        const loi = new Set(((stop && stop.linesOfInterest) || []).map(normLine));
+        const loi = new Set(
+          ((stop && stop.linesOfInterest) || []).map(normLine),
+        );
         const dirs = (stop && stop.directions) || {};
         const hasOtherLines = deps.some((d) => !loi.has(normLine(d.line)));
 
@@ -472,34 +543,40 @@ import '../styles/app.css';
           if (!loi.has(line)) return false;
           const spec = parseDir(dirs[line] ?? dirs[dep.line]);
           if (spec != null) {
-            return dep.bearing != null && angDiff(dep.bearing, spec.bearing) <= spec.tol;
+            return (
+              dep.bearing != null &&
+              angDiff(dep.bearing, spec.bearing) <= spec.tol
+            );
           }
           return hasOtherLines;
         }
 
         const hasHighlighted = deps.some((d) => isHighlighted(d));
 
-        let list = slide.querySelector('.dep-list');
+        let list = slide.querySelector(".dep-list");
         if (!list) {
-          slide.innerHTML = '<div class="dep-list"></div><div class="update-hint"></div>';
-          list = slide.querySelector('.dep-list');
+          slide.innerHTML =
+            '<div class="dep-list"></div><div class="update-hint"></div>';
+          list = slide.querySelector(".dep-list");
         }
-        list.classList.toggle('has-highlights', hasHighlighted);
+        list.classList.toggle("has-highlights", hasHighlighted);
 
         const keys = deps.map(keyOf);
         const keySet = new Set(keys);
 
         const existing = {};
         [...list.children].forEach((node) => {
-          if (node.classList.contains('leaving')) return;
+          if (node.classList.contains("leaving")) return;
           existing[node.dataset.key] = node;
         });
 
         [...list.children].forEach((node) => {
-          if (node.classList.contains('leaving')) return;
+          if (node.classList.contains("leaving")) return;
           if (!keySet.has(node.dataset.key)) {
-            node.classList.add('leaving');
-            node.addEventListener('animationend', () => node.remove(), { once: true });
+            node.classList.add("leaving");
+            node.addEventListener("animationend", () => node.remove(), {
+              once: true,
+            });
             setTimeout(() => node.parentNode && node.remove(), 500);
           }
         });
@@ -512,19 +589,26 @@ import '../styles/app.css';
             updateNode(node, dep, false, hl);
           } else {
             node = createNode(dep, hl);
-            node.classList.add('entering');
-            node.addEventListener('animationend', () => node.classList.remove('entering'), { once: true });
+            node.classList.add("entering");
+            node.addEventListener(
+              "animationend",
+              () => node.classList.remove("entering"),
+              { once: true },
+            );
           }
           const ref = prev ? prev.nextSibling : list.firstChild;
           if (ref !== node) list.insertBefore(node, ref);
           prev = node;
         });
 
-        const hint = slide.querySelector('.update-hint');
+        const hint = slide.querySelector(".update-hint");
         if (hint) {
           hint.textContent =
-            'Last updated: ' +
-            new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            "Last updated: " +
+            new Date().toLocaleTimeString("en-GB", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
         }
       }
 
@@ -546,7 +630,30 @@ import '../styles/app.css';
 
       goTo(0);
       initialSort();
+
+      document
+        .getElementById("locateBtn")
+        .addEventListener("click", async () => {
+          const btn = document.getElementById("locateBtn");
+          btn.classList.add("loading");
+          try {
+            const me = await getPosition();
+            const newOrder = sortedByProximity(me);
+            if (orderChanged(newOrder)) {
+              reorderDom(newOrder, true);
+              order = newOrder;
+            }
+            current = 0;
+            setSlideTransform(0, false);
+            updateActiveTab();
+            centerTab(order[0].id);
+            cache[order[0].id] = null;
+            await loadDepartures(0, true);
+          } catch (e) {
+            /* geolocation failed */
+          }
+          btn.classList.remove("loading");
+        });
     </script>
   </body>
 </html>
-

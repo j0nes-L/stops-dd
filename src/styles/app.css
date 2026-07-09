@@ -394,3 +394,32 @@ body {
   animation: spin 0.8s linear infinite;
 }
 
+/* Locate button */
+.locate-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 100;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: none;
+  background: #222;
+  color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: background 0.2s, transform 0.2s;
+}
+
+.locate-btn:active {
+  transform: scale(0.92);
+  background: #333;
+}
+
+.locate-btn.loading svg {
+  animation: spin 0.8s linear infinite;
+}
+
