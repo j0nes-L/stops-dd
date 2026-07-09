@@ -21,3 +21,6 @@ pnpm-debug.log*
 .vercel/
 
 /.idea
+
+# local dev overrides
+src/scripts/stops.local.ts

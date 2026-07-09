@@ -10,8 +10,9 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/vercel": "^8.1.0",
     "astro": "^5.9.0",
-    "@astrojs/vercel": "^8.1.0"
+    "dvbjs": "^7.0.0"
   },
   "private": true
 }
