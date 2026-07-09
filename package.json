@@ -1,0 +1,17 @@
+{
+  "name": "frequent-stops",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Frequent Stops - stops.jonasludorf.dev",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "astro": "^5.9.0",
+    "@astrojs/vercel": "^8.1.0"
+  },
+  "private": true
+}
