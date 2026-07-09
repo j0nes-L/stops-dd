@@ -2,7 +2,7 @@
   "name": "frequent-stops",
   "type": "module",
   "version": "1.0.0",
-  "description": "Frequent Stops - stops.jonasludorf.dev",
+  "description": "Frequent Stops",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
