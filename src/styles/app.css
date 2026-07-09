@@ -86,6 +86,8 @@ body {
 
 /* Departure Items */
 .departure {
+  --dep-opacity: 1;
+  --dep-saturate: 1;
   display: flex;
   align-items: center;
   padding: 12px 12px;
@@ -93,7 +95,9 @@ body {
   border-radius: 12px;
   background: #141414;
   gap: 12px;
-  transition: background 0.15s;
+  opacity: var(--dep-opacity);
+  filter: saturate(var(--dep-saturate));
+  transition: background 0.15s, opacity 0.25s ease, filter 0.25s ease;
 }
 
 .departure:active {
@@ -101,6 +105,11 @@ body {
 }
 
 /* Lines of interest highlight */
+.dep-list.has-highlights .departure:not(.highlight):not(.leaving) {
+  --dep-opacity: 0.5;
+  --dep-saturate: 0.2;
+}
+
 .departure.highlight {
   background: #1e2a1e;
 }
@@ -308,14 +317,14 @@ body {
     transform: translateY(-10px);
   }
   to {
-    opacity: 1;
+    opacity: var(--dep-opacity);
     transform: translateY(0);
   }
 }
 
 @keyframes depOut {
   from {
-    opacity: 1;
+    opacity: var(--dep-opacity);
     max-height: 80px;
     transform: translateX(0);
   }

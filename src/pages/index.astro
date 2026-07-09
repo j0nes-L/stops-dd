@@ -477,11 +477,14 @@ import '../styles/app.css';
           return hasOtherLines;
         }
 
+        const hasHighlighted = deps.some((d) => isHighlighted(d));
+
         let list = slide.querySelector('.dep-list');
         if (!list) {
           slide.innerHTML = '<div class="dep-list"></div><div class="update-hint"></div>';
           list = slide.querySelector('.dep-list');
         }
+        list.classList.toggle('has-highlights', hasHighlighted);
 
         const keys = deps.map(keyOf);
         const keySet = new Set(keys);
