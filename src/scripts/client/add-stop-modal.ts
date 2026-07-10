@@ -163,7 +163,9 @@ export function initAddStopModal(deps: AddStopModalDeps): void {
       modalSelectedStop = null;
       modalLines = [];
       addLinesList.innerHTML = '';
-      addSelectedStop.textContent = stop.name + ' — already in your list. Pick another.';
+      addSelectedStop.innerHTML =
+        `<span class="selected-stop-label">Already added</span>` +
+        `<span class="selected-stop-name">${escapeHtml(stop.name)} \u2014 pick another stop.</span>`;
       addSelectedStop.classList.add('warn');
       addLinesHint.textContent = '';
       addSaveBtn.disabled = true;
@@ -176,7 +178,9 @@ export function initAddStopModal(deps: AddStopModalDeps): void {
       name: stop.name,
       coords: stop.coords,
     };
-    addSelectedStop.textContent = stop.name;
+    addSelectedStop.innerHTML =
+      `<span class="selected-stop-label">Selected stop</span>` +
+      `<span class="selected-stop-name">${escapeHtml(stop.name)}</span>`;
     addSelectedStop.classList.remove('warn');
     addSaveBtn.disabled = false;
 
