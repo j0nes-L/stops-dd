@@ -1,4 +1,4 @@
-import type { Stop } from '../stops.types';
+import type { DirSpec, Stop } from '../stops.types';
 import type { SearchResult, StopLinesResponse, UserStop } from './types';
 
 export interface AddStopModalDeps {
@@ -18,8 +18,6 @@ interface ModalSelectedStop {
   name: string;
   coords: [number, number] | null;
 }
-
-type DirSpec = string | number | { to: string | number; tol?: number };
 
 function el<T extends HTMLElement = HTMLElement>(id: string): T {
   const node = document.getElementById(id);
@@ -48,12 +46,11 @@ function angDiff(a: number, b: number): number {
   return d > 180 ? 360 - d : d;
 }
 
-function circularMean(anglesDeg: number[]): number {
-  const rad = anglesDeg.map((a) => (a * Math.PI) / 180);
-  const sinSum = rad.reduce((s, a) => s + Math.sin(a), 0);
-  const cosSum = rad.reduce((s, a) => s + Math.cos(a), 0);
-  const mean = (Math.atan2(sinSum, cosSum) * 180) / Math.PI;
-  return (mean + 360) % 360;
+function normDest(s: unknown): string {
+  return String(s ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
 }
 
 export function initAddStopModal(deps: AddStopModalDeps): AddStopModalApi {
@@ -247,7 +244,7 @@ export function initAddStopModal(deps: AddStopModalDeps): AddStopModalApi {
         const item = document.createElement('label');
         item.className = 'dest-item' + (d.bearing == null ? ' no-bearing' : '');
         item.innerHTML =
-          `<input type="checkbox" data-line="${escapeHtml(String(l.line))}" data-bearing="${d.bearing == null ? '' : d.bearing}" />` +
+          `<input type="checkbox" data-line="${escapeHtml(String(l.line))}" data-dest="${escapeHtml(d.name)}" data-bearing="${d.bearing == null ? '' : d.bearing}" />` +
           `<span class="dest-item-label">${escapeHtml(d.name)}</span>`;
         destList.appendChild(item);
       }
@@ -259,21 +256,19 @@ export function initAddStopModal(deps: AddStopModalDeps): AddStopModalApi {
     if (!modalSelectedStop) return null;
 
     const linesOfInterest: (string | number)[] = [];
-    const directions: Record<string, { to: number; tol: number }> = {};
+    const directions: Record<string, { dest: string[] }> = {};
 
     interface LineEntry {
       line: string | number;
       total: number;
-      checked: number[];
-      hasNullChecked: boolean;
+      checkedDests: string[];
     }
     const grouped = new Map<string, LineEntry>();
     for (const l of modalLines) {
       grouped.set(String(l.line), {
         line: l.line,
         total: l.destinations.length,
-        checked: [],
-        hasNullChecked: false,
+        checkedDests: [],
       });
     }
     const checkboxes = addLinesList.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
@@ -282,30 +277,16 @@ export function initAddStopModal(deps: AddStopModalDeps): AddStopModalApi {
       const key = cb.dataset.line ?? '';
       const entry = grouped.get(key);
       if (!entry) return;
-      const b = cb.dataset.bearing;
-      if (b === '' || b == null) entry.hasNullChecked = true;
-      else entry.checked.push(Number(b));
+      const dest = cb.dataset.dest ?? '';
+      if (dest) entry.checkedDests.push(dest);
     });
 
     for (const entry of grouped.values()) {
-      const checkedCount = entry.checked.length + (entry.hasNullChecked ? 1 : 0);
-      if (checkedCount === 0) continue;
+      if (entry.checkedDests.length === 0) continue;
       linesOfInterest.push(entry.line);
-
-      if (checkedCount >= entry.total || entry.hasNullChecked) continue;
-      if (entry.checked.length === 0) continue;
-
-      if (entry.checked.length === 1) {
-        directions[String(entry.line)] = { to: entry.checked[0]!, tol: 65 };
-      } else {
-        const center = circularMean(entry.checked);
-        const maxDev = Math.max(...entry.checked.map((a) => angDiff(a, center)));
-        if (maxDev > 90) continue;
-        directions[String(entry.line)] = {
-          to: Math.round(center),
-          tol: Math.max(30, Math.round(maxDev + 15)),
-        };
-      }
+      // Only restrict to specific destinations when the user picked a subset.
+      if (entry.checkedDests.length >= entry.total) continue;
+      directions[String(entry.line)] = { dest: entry.checkedDests };
     }
 
     const stop: Stop = {
@@ -371,6 +352,15 @@ export function initAddStopModal(deps: AddStopModalDeps): AddStopModalApi {
         cb.checked = true;
         return;
       }
+      // New destination-name based spec.
+      if (typeof dirSpec === 'object' && dirSpec !== null && 'dest' in dirSpec) {
+        const raw = Array.isArray(dirSpec.dest) ? dirSpec.dest : [dirSpec.dest];
+        const wanted = new Set(raw.map(normDest).filter((s) => s.length > 0));
+        const dest = normDest(cb.dataset.dest ?? '');
+        if (wanted.has(dest)) cb.checked = true;
+        return;
+      }
+      // Legacy bearing-based spec.
       const b = cb.dataset.bearing;
       if (b === '' || b == null) return;
       const bearing = Number(b);

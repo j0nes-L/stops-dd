@@ -1,4 +1,4 @@
-import type { Stop } from '../stops.types';
+import type { DirSpec, Stop } from '../stops.types';
 import type { Departure } from './types';
 
 const COMPASS: Record<string, number> = {
@@ -19,6 +19,13 @@ function normLine(line: unknown): string {
     .toUpperCase();
 }
 
+function normDest(s: unknown): string {
+  return String(s ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
 function toBearing(v: unknown): number | null {
   if (v == null) return null;
   if (typeof v === 'number') return ((v % 360) + 360) % 360;
@@ -26,13 +33,17 @@ function toBearing(v: unknown): number | null {
   return key in COMPASS ? COMPASS[key]! : null;
 }
 
-type DirSpec =
-  | string
-  | number
-  | { to: string | number; tol?: number };
+type ParsedDir =
+  | { kind: 'bearing'; bearing: number; tol: number }
+  | { kind: 'dest'; dests: Set<string> };
 
-function parseDir(spec: DirSpec | undefined | null): { bearing: number; tol: number } | null {
+function parseDir(spec: DirSpec | undefined | null): ParsedDir | null {
   if (spec == null) return null;
+  if (typeof spec === 'object' && spec !== null && 'dest' in spec) {
+    const raw = Array.isArray(spec.dest) ? spec.dest : [spec.dest];
+    const dests = new Set(raw.map(normDest).filter((s) => s.length > 0));
+    return dests.size ? { kind: 'dest', dests } : null;
+  }
   let to: unknown = spec;
   let tol = DIR_TOL;
   if (typeof spec === 'object' && spec !== null) {
@@ -40,7 +51,7 @@ function parseDir(spec: DirSpec | undefined | null): { bearing: number; tol: num
     if (typeof spec.tol === 'number') tol = spec.tol;
   }
   const bearing = toBearing(to);
-  return bearing == null ? null : { bearing, tol };
+  return bearing == null ? null : { kind: 'bearing', bearing, tol };
 }
 
 function angDiff(a: number, b: number): number {
@@ -156,6 +167,9 @@ export function renderSlide(
     if (!loi.has(line)) return false;
     const spec = parseDir(dirs[line] ?? dirs[String(dep.line)]);
     if (spec != null) {
+      if (spec.kind === 'dest') {
+        return spec.dests.has(normDest(dep.direction));
+      }
       return dep.bearing != null && angDiff(dep.bearing, spec.bearing) <= spec.tol;
     }
     return hasOtherLines;

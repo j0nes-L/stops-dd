@@ -73,26 +73,39 @@ export const stops: Stop[] = [
     name: 'Postplatz',              // display name
     coords: [13.7335, 51.0508],     // [lng, lat] — enables proximity sorting
     linesOfInterest: [1, 2, 9, 12], // lines to highlight
-    directions: { 1: 'E', 2: 'E' }, // direction of interest per line
+    directions: { 1: { dest: 'Kleinzschachwitz' }, 2: 'E' }, // per-line filter
   },
 ];
 ```
 
 - **`linesOfInterest`** — numbers or strings (e.g. `62`, `'S1'`). A line is only
   highlighted when other lines also depart at the stop (unless a direction is set).
-- **`directions`** — per line, a heading toward where you want to travel. Give a
-  compass string (`'N'`, `'NE'`, `'E'`, `'SE'`, `'S'`, `'SW'`, `'W'`, `'NW'`) or
-  degrees (`0`–`360`). A departure counts as "in the right direction" when the
-  bearing from the stop to the (dynamically resolved) destination is within a
-  tolerance (default 65°). This avoids hardcoding terminus names — any terminus
-  in that general direction qualifies.
+- **`directions`** — per line, which departures count as "the right way". Two
+  styles are supported:
 
-  For tricky stops where both travel directions lie on the same side, narrow the
-  tolerance with the object form:
+  1. **By destination name** (recommended, and what the `+` modal now writes):
 
-  ```ts
-  directions: { 62: { to: 'NE', tol: 40 } }
-  ```
+     ```ts
+     directions: { 62: { dest: 'Johannstadt, S-Bahnhof Plauen' } }
+     // or multiple accepted terminals for the same line:
+     directions: { 62: { dest: ['Johannstadt, S-Bahnhof Plauen', 'Döltzschen'] } }
+     ```
+
+     The match is case-insensitive and matches `dep.direction` exactly (after
+     collapsing whitespace). This is robust for stops where two branches of the
+     same line share a rough compass direction — e.g. line 62 at *S-Bahnhof
+     Plauen* runs to *Johannstadt* and *Löbtau Süd* on almost the same bearing,
+     so a compass/tolerance would highlight both.
+
+  2. **By compass direction** (legacy, still supported): give a compass string
+     (`'N'`, `'NE'`, `'E'`, `'SE'`, `'S'`, `'SW'`, `'W'`, `'NW'`) or degrees
+     (`0`–`360`). A departure counts as "in the right direction" when the
+     bearing from the stop to the (dynamically resolved) destination is within
+     a tolerance (default 65°). For tricky stops narrow it with the object form:
+
+     ```ts
+     directions: { 1: 'E', 2: { to: 'NE', tol: 40 } }
+     ```
 
   When a direction is configured for a line, only departures matching **both**
   the line and the direction are highlighted — even if it is the only line at
