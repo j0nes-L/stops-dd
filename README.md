@@ -33,11 +33,18 @@ npm run preview  # preview the production build
 
 ## Configuring your stops
 
-Stops live in `src/scripts/`. The loader in `src/scripts/stops.ts` uses your
-local override if present, otherwise the committed example:
+There are three ways to configure the initial stop list, in this priority order:
 
-1. `src/scripts/stops.local.ts` — **your personal, git-ignored config** (used if present).
-2. `src/scripts/stops.example.ts` — committed example config (fallback).
+1. **`STOPS_JSON` environment variable** — a JSON array of `Stop` objects.
+   Handy for hosted deployments (e.g. Vercel). If set and parseable, wins.
+2. **`src/scripts/stops.local.ts`** — your personal, git-ignored config.
+   Used if the env var is missing.
+3. **`src/scripts/stops.example.ts`** — committed example config, used as
+   fallback.
+
+Beyond that, users can add their own stops **at runtime via the `+` button** in
+the UI. Those stops are stored in the browser’s `localStorage` (per device) and
+appear as additional tabs.
 
 To set up your own stops without committing them to a public repo, copy the
 example to a local file and edit it:
@@ -50,19 +57,19 @@ cp src/scripts/stops.example.ts src/scripts/stops.local.ts
 
 ### Finding stop ids and coordinates
 
-Use the helper script — it prints ready-to-paste config lines including
-coordinates:
+Use the `+` button in the UI — it searches the DVB stop registry, lets you pick
+lines and directions of interest, and stores the result in `localStorage`.
 
-```bash
-node src/scripts/find-stop.mjs "Postplatz"
-```
+If you’d rather bake stops into the config (env / `stops.local.ts`), the same
+search endpoint is available at `GET /api/search-stop?q=<name>` while the dev
+server is running.
 
 ### Stop options
 
 ```ts
 export const stops: Stop[] = [
   {
-    id: '33000037',                 // DVB stop id (from find-stop.mjs)
+    id: '33000037',                 // DVB stop id
     name: 'Postplatz',              // display name
     coords: [13.7335, 51.0508],     // [lng, lat] — enables proximity sorting
     linesOfInterest: [1, 2, 9, 12], // lines to highlight
@@ -93,25 +100,28 @@ export const stops: Stop[] = [
 
 ## Line colours
 
-Line badges use OSM colours mapped in `src/scripts/lines.ts`. Trams/trains render
-as rounded rectangles, buses and S-Bahn as circles. The helper
-`src/scripts/fetch-gtfs-colors.mjs` can pull colours from the GTFS feed.
+Line badges use colours mapped in `src/scripts/lines.ts`. Trams/trains render
+as rounded rectangles, buses and S-Bahn as circles.
 
 ## Project structure
 
 ```
 src/
   pages/
-    index.astro          # UI: tabs, swipe, pull-to-refresh, rendering
-    api/departures.ts    # SSR endpoint: departures + destination bearings
+    index.astro           # UI shell
+    api/
+      departures.ts       # SSR endpoint: departures + bearings
+      search-stop.ts      # SSR endpoint: stop search (for the + modal)
+      stop-lines.ts       # SSR endpoint: lines & destinations at a stop
+  components/
+    AddStopModal.astro    # “Add stop” modal markup
   scripts/
-    stops.ts             # config loader (local override -> example)
-    stops.types.ts       # Stop type
-    stops.example.ts     # committed example config
-    stops.local.ts       # your private config (git-ignored)
-    lines.ts             # line colours & badge shapes
-    find-stop.mjs        # helper: search stops -> id + coords
-    fetch-gtfs-colors.mjs
+    stops.ts              # config loader (env -> local -> example)
+    stops.types.ts        # Stop type
+    stops.example.ts      # committed example config
+    stops.local.ts        # your private config (git-ignored)
+    lines.ts              # line colours & badge shapes
+    client/               # client-side app modules (bundled by Astro)
   styles/app.css
 ```
 

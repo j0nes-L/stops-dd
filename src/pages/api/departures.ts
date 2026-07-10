@@ -41,21 +41,32 @@ async function destCoords(name: string, from: Coord): Promise<Coord | null> {
   return coords;
 }
 
+function parseCoords(raw: string | null): Coord | undefined {
+  if (!raw) return undefined;
+  const parts = raw.split(',').map((v) => Number(v.trim()));
+  if (parts.length !== 2 || parts.some((v) => !Number.isFinite(v))) return undefined;
+  const [lng, lat] = parts;
+  if (lng < -180 || lng > 180 || lat < -90 || lat > 90) return undefined;
+  return [lng, lat];
+}
+
 export const GET: APIRoute = async ({ url }) => {
   const stopId = url.searchParams.get('stopId');
-  const stop = stops.find((s) => s.id === stopId);
 
-  if (!stopId || !stop) {
+  if (!stopId || !/^[A-Za-z0-9_-]{1,32}$/.test(stopId)) {
     return new Response(JSON.stringify({ error: 'Invalid stopId' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
+  const configured = stops.find((s) => s.id === stopId);
+  const adhocCoords = parseCoords(url.searchParams.get('coords'));
+
   try {
     const data = await monitor(stopId, 0, 20);
 
-    const from = stop.coords as Coord | undefined;
+    const from = (configured?.coords ?? adhocCoords) as Coord | undefined;
 
     const bearings = new Map<string, number | null>();
     if (from) {
