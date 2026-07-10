@@ -6,6 +6,11 @@ export interface AddStopModalDeps {
   getUserStops(): UserStop[];
   onAddStop(stop: Stop): void;
   onRemoveStop(id: string): void;
+  onEditStop(stop: Stop): void;
+}
+
+export interface AddStopModalApi {
+  openForEdit(stop: Stop): void;
 }
 
 interface ModalSelectedStop {
@@ -13,6 +18,8 @@ interface ModalSelectedStop {
   name: string;
   coords: [number, number] | null;
 }
+
+type DirSpec = string | number | { to: string | number; tol?: number };
 
 function el<T extends HTMLElement = HTMLElement>(id: string): T {
   const node = document.getElementById(id);
@@ -49,9 +56,10 @@ function circularMean(anglesDeg: number[]): number {
   return (mean + 360) % 360;
 }
 
-export function initAddStopModal(deps: AddStopModalDeps): void {
+export function initAddStopModal(deps: AddStopModalDeps): AddStopModalApi {
   const addBtn = el<HTMLButtonElement>('addBtn');
   const addModal = el('addModal');
+  const addModalTitle = el('addModalTitle');
   const addModalClose = el<HTMLButtonElement>('addModalClose');
   const addCancelBtn = el<HTMLButtonElement>('addCancelBtn');
   const addSaveBtn = el<HTMLButtonElement>('addSaveBtn');
@@ -72,6 +80,7 @@ export function initAddStopModal(deps: AddStopModalDeps): void {
   let searchDebounce: number | null = null;
   let searchReqId = 0;
   let linesReqId = 0;
+  let editingStop: Stop | null = null;
 
   function showStep(name: 'search' | 'lines' | 'manage') {
     addStepSearch.hidden = name !== 'search';
@@ -79,10 +88,14 @@ export function initAddStopModal(deps: AddStopModalDeps): void {
     addStepManage.hidden = name !== 'manage';
     addSaveBtn.hidden = name === 'manage';
     addManageBtn.hidden = name !== 'search';
+    addBackBtn.hidden = editingStop != null;
     if (name === 'manage') renderUserStopsList();
   }
 
   function openModal() {
+    editingStop = null;
+    addModalTitle.textContent = 'Add stop';
+    addSaveBtn.textContent = 'Save';
     addModal.hidden = false;
     document.body.classList.add('modal-open');
     showStep('search');
@@ -97,6 +110,7 @@ export function initAddStopModal(deps: AddStopModalDeps): void {
   function closeModal() {
     addModal.hidden = true;
     document.body.classList.remove('modal-open');
+    editingStop = null;
   }
 
   addBtn.addEventListener('click', openModal);
@@ -312,7 +326,11 @@ export function initAddStopModal(deps: AddStopModalDeps): void {
   addSaveBtn.addEventListener('click', () => {
     const newStop = buildStopFromModal();
     if (!newStop) return;
-    deps.onAddStop(newStop);
+    if (editingStop) {
+      deps.onEditStop(newStop);
+    } else {
+      deps.onAddStop(newStop);
+    }
     closeModal();
   });
 
@@ -340,4 +358,75 @@ export function initAddStopModal(deps: AddStopModalDeps): void {
       userStopsList.appendChild(row);
     }
   }
+
+  function preselectFromStop(stop: Stop) {
+    const loi = new Set((stop.linesOfInterest ?? []).map((l) => String(l)));
+    const dirs = (stop.directions ?? {}) as Record<string, DirSpec>;
+    const boxes = addLinesList.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
+    boxes.forEach((cb) => {
+      const line = cb.dataset.line ?? '';
+      if (!loi.has(line)) return;
+      const dirSpec = dirs[line];
+      if (dirSpec == null) {
+        cb.checked = true;
+        return;
+      }
+      const b = cb.dataset.bearing;
+      if (b === '' || b == null) return;
+      const bearing = Number(b);
+      let to: number;
+      let tol = 65;
+      if (typeof dirSpec === 'object') {
+        to = Number(dirSpec.to);
+        if (typeof dirSpec.tol === 'number') tol = dirSpec.tol;
+      } else {
+        to = Number(dirSpec);
+      }
+      if (Number.isNaN(to)) return;
+      if (angDiff(bearing, to) <= tol) cb.checked = true;
+    });
+  }
+
+  async function openForEdit(stop: Stop) {
+    editingStop = stop;
+    addModalTitle.textContent = 'Edit stop';
+    addSaveBtn.textContent = 'Update';
+    addModal.hidden = false;
+    document.body.classList.add('modal-open');
+
+    modalSelectedStop = {
+      id: stop.id,
+      name: stop.name,
+      coords: Array.isArray(stop.coords) && stop.coords.length === 2 ? stop.coords : null,
+    };
+    modalLines = [];
+    addLinesList.innerHTML = '';
+    addSelectedStop.innerHTML =
+      `<span class="selected-stop-label">Editing stop</span>` +
+      `<span class="selected-stop-name">${escapeHtml(stop.name)}</span>`;
+    addSelectedStop.classList.remove('warn');
+    addLinesHint.textContent = 'Loading lines…';
+    addSaveBtn.disabled = false;
+    showStep('lines');
+
+    const reqId = ++linesReqId;
+    try {
+      const res = await fetch(`/api/stop-lines?stopId=${encodeURIComponent(stop.id)}`);
+      const data: StopLinesResponse & { error?: string } = await res.json();
+      if (reqId !== linesReqId) return;
+      if (!res.ok) throw new Error(data.error ?? 'Failed');
+      if (data.stop && data.stop.coords && modalSelectedStop) {
+        modalSelectedStop.coords = data.stop.coords;
+      }
+      modalLines = data.lines ?? [];
+      renderLines();
+      preselectFromStop(stop);
+    } catch {
+      if (reqId !== linesReqId) return;
+      addLinesHint.textContent =
+        "Couldn't load lines. Save to keep the stop with its existing settings.";
+    }
+  }
+
+  return { openForEdit };
 }

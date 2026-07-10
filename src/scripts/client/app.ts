@@ -2,6 +2,7 @@ import type { Stop } from '../stops.types';
 import type { DeparturesResponse, UserStop } from './types';
 import { renderSlide } from './render';
 import { initAddStopModal } from './add-stop-modal';
+import type { AddStopModalApi } from './add-stop-modal';
 
 const USER_STOPS_KEY = 'freqstops:userStops';
 const POS_KEY = 'freqstops:pos';
@@ -61,6 +62,7 @@ function boot() {
   let axis: 'h' | 'v' | null = null;
   let isDragging = false;
   let refreshing = false;
+  let modalApi: AddStopModalApi | null = null;
   const cache: Record<string, { data: DeparturesResponse; time: number } | null | undefined> = {};
 
   function tabById(id: string): HTMLElement | null {
@@ -390,7 +392,10 @@ function boot() {
 
     const cached = cache[stop.id];
     if (!force && cached && now - cached.time < 30000) {
-      renderSlide(slide, cached.data, stop, { onRemoveUserStop: removeUserStop });
+      renderSlide(slide, cached.data, stop, {
+        onRemoveUserStop: removeUserStop,
+        onEditUserStop: editUserStop,
+      });
       return;
     }
 
@@ -407,7 +412,10 @@ function boot() {
       const res = await fetch(`/api/departures?${params.toString()}`);
       const data: DeparturesResponse = await res.json();
       cache[stop.id] = { data, time: Date.now() };
-      renderSlide(slide, data, stop, { onRemoveUserStop: removeUserStop });
+      renderSlide(slide, data, stop, {
+        onRemoveUserStop: removeUserStop,
+        onEditUserStop: editUserStop,
+      });
     } catch {
       if (!slide.querySelector('.dep-list')) {
         slide.innerHTML = '<div class="error">Failed to load</div>';
@@ -452,6 +460,24 @@ function boot() {
     updateActiveTab();
     const nextId = order[current]?.id;
     if (nextId) centerTab(nextId);
+  }
+
+  function updateUserStop(updated: Stop): void {
+    const idx = userStops.findIndex((s) => s.id === updated.id);
+    if (idx < 0) return;
+    const runtimeStop: UserStop = { ...updated, _userAdded: true };
+    userStops = userStops.map((s) => (s.id === updated.id ? runtimeStop : s));
+    saveUserStops(userStops);
+    order = order.map((s) => (s.id === updated.id ? runtimeStop : s));
+    cache[updated.id] = null;
+    const orderIdx = order.findIndex((s) => s.id === updated.id);
+    if (orderIdx >= 0) loadDepartures(orderIdx, true);
+  }
+
+  function editUserStop(id: string): void {
+    const stop = userStops.find((s) => s.id === id);
+    if (!stop) return;
+    modalApi?.openForEdit(stripUserFlag(stop));
   }
 
   function updateEmptyState(): void {
@@ -509,11 +535,12 @@ function boot() {
     locateBtn.classList.remove('loading');
   });
 
-  initAddStopModal({
+  modalApi = initAddStopModal({
     hasStop: (id) => order.some((s) => s.id === id),
     getUserStops: () => userStops,
     onAddStop: addUserStop,
     onRemoveStop: removeUserStop,
+    onEditStop: updateUserStop,
   });
 }
 

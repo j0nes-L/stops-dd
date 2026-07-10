@@ -991,6 +991,8 @@ body.modal-open {
 .remove-stop {
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: 10px;
   padding: 24px 0 12px;
 }
 
@@ -998,16 +1000,50 @@ body.modal-open {
   background: transparent;
   border: 1px solid #4a2222;
   color: #f87171;
-  padding: 10px 18px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.remove-stop-btn:hover {
+  color: #fca5a5;
+  border-color: #5a2929;
 }
 
 .remove-stop-btn:active {
   background: #2a1414;
   border-color: #6a3232;
+}
+
+.edit-stop-btn {
+  background: transparent;
+  border: 1px solid #2a2a2a;
+  color: #9ca3af;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.edit-stop-btn:hover {
+  color: #e5e5e5;
+  border-color: #3a3a3a;
+}
+
+.edit-stop-btn:active {
+  background: #1c1c1c;
+  border-color: #3a3a3a;
+  color: #f5f5f5;
 }
 
