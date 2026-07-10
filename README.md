@@ -1,4 +1,4 @@
-# Frequent Stops
+# Filtering your Frequent Stops in the VVO Region
 
 A minimal, mobile-first web app that shows the next departures for a personal
 list of public-transit stops in Dresden (DVB / VVO network). Swipe between your
