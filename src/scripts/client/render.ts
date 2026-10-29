@@ -1,18 +1,6 @@
 import type { DirSpec, Stop } from '../stops.types';
 import type { Departure } from './types';
 
-const COMPASS: Record<string, number> = {
-  N: 0,
-  NE: 45,
-  E: 90,
-  SE: 135,
-  S: 180,
-  SW: 225,
-  W: 270,
-  NW: 315,
-};
-const DIR_TOL = 65;
-
 function normLine(line: unknown): string {
   return String(line ?? '')
     .trim()
@@ -26,37 +14,11 @@ function normDest(s: unknown): string {
     .replace(/\s+/g, ' ');
 }
 
-function toBearing(v: unknown): number | null {
-  if (v == null) return null;
-  if (typeof v === 'number') return ((v % 360) + 360) % 360;
-  const key = String(v).trim().toUpperCase();
-  return key in COMPASS ? COMPASS[key]! : null;
-}
-
-type ParsedDir =
-  | { kind: 'bearing'; bearing: number; tol: number }
-  | { kind: 'dest'; dests: Set<string> };
-
-function parseDir(spec: DirSpec | undefined | null): ParsedDir | null {
-  if (spec == null) return null;
-  if (typeof spec === 'object' && spec !== null && 'dest' in spec) {
-    const raw = Array.isArray(spec.dest) ? spec.dest : [spec.dest];
-    const dests = new Set(raw.map(normDest).filter((s) => s.length > 0));
-    return dests.size ? { kind: 'dest', dests } : null;
-  }
-  let to: unknown = spec;
-  let tol = DIR_TOL;
-  if (typeof spec === 'object' && spec !== null) {
-    to = spec.to;
-    if (typeof spec.tol === 'number') tol = spec.tol;
-  }
-  const bearing = toBearing(to);
-  return bearing == null ? null : { kind: 'bearing', bearing, tol };
-}
-
-function angDiff(a: number, b: number): number {
-  const d = Math.abs(a - b) % 360;
-  return d > 180 ? 360 - d : d;
+function parseDests(spec: DirSpec | undefined | null): Set<string> | null {
+  if (spec == null || typeof spec !== 'object' || !('dest' in spec)) return null;
+  const raw = Array.isArray(spec.dest) ? spec.dest : [spec.dest];
+  const dests = new Set(raw.map(normDest).filter((s) => s.length > 0));
+  return dests.size ? dests : null;
 }
 
 function keyOf(dep: Departure): string {
@@ -165,13 +127,8 @@ export function renderSlide(
   function isHighlighted(dep: Departure): boolean {
     const line = normLine(dep.line);
     if (!loi.has(line)) return false;
-    const spec = parseDir(dirs[line] ?? dirs[String(dep.line)]);
-    if (spec != null) {
-      if (spec.kind === 'dest') {
-        return spec.dests.has(normDest(dep.direction));
-      }
-      return dep.bearing != null && angDiff(dep.bearing, spec.bearing) <= spec.tol;
-    }
+    const dests = parseDests(dirs[line] ?? dirs[String(dep.line)]);
+    if (dests != null) return dests.has(normDest(dep.direction));
     return hasOtherLines;
   }
 

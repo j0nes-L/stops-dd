@@ -13,7 +13,6 @@ export interface Departure {
   minutesUntil: number;
   delayTime: number;
   state: string;
-  bearing: number | null;
   badge?: LineStyle;
 }
 
@@ -35,6 +34,6 @@ export interface StopLinesResponse {
     line: string | number;
     mot: string | null;
     badge?: LineStyle;
-    destinations: Array<{ name: string; bearing: number | null }>;
+    destinations: Array<{ name: string }>;
   }>;
 }

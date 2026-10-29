@@ -14,8 +14,8 @@ Built with [Astro](https://astro.build/) (SSR) and the
 - **Delays** shown per departure (`+2 min`, `on time`, `Cancelled`), plus the
   scheduled departure time.
 - **Lines of interest** — highlight the lines you actually care about at each stop.
-- **Direction of interest** — highlight only the departures heading the way you
-  want, using a compass bearing instead of hardcoded terminus names.
+- **Direction of interest** — highlight only the departures heading to the
+  destinations you picked.
 - **Proximity sorting** — on load, stops are sorted nearest-first using your
   geolocation; the order refreshes (with an animated re-sort) on every update.
 - **No-flicker updates** — departures update in place; new/removed entries
@@ -73,43 +73,26 @@ export const stops: Stop[] = [
     name: 'Postplatz',              // display name
     coords: [13.7335, 51.0508],     // [lng, lat] — enables proximity sorting
     linesOfInterest: [1, 2, 9, 12], // lines to highlight
-    directions: { 1: { dest: 'Kleinzschachwitz' }, 2: 'E' }, // per-line filter
+    directions: { 1: { dest: 'Kleinzschachwitz' } }, // per-line filter
   },
 ];
 ```
 
 - **`linesOfInterest`** — numbers or strings (e.g. `62`, `'S1'`). A line is only
   highlighted when other lines also depart at the stop (unless a direction is set).
-- **`directions`** — per line, which departures count as "the right way". Two
-  styles are supported:
+- **`directions`** — per line, which destinations count as "the right way":
 
-  1. **By destination name** (recommended, and what the `+` modal now writes):
+  ```ts
+  directions: { 62: { dest: 'Johannstadt, S-Bahnhof Plauen' } }
+  // or multiple accepted terminals for the same line:
+  directions: { 62: { dest: ['Johannstadt, S-Bahnhof Plauen', 'Döltzschen'] } }
+  ```
 
-     ```ts
-     directions: { 62: { dest: 'Johannstadt, S-Bahnhof Plauen' } }
-     // or multiple accepted terminals for the same line:
-     directions: { 62: { dest: ['Johannstadt, S-Bahnhof Plauen', 'Döltzschen'] } }
-     ```
-
-     The match is case-insensitive and matches `dep.direction` exactly (after
-     collapsing whitespace). This is robust for stops where two branches of the
-     same line share a rough compass direction — e.g. line 62 at *S-Bahnhof
-     Plauen* runs to *Johannstadt* and *Löbtau Süd* on almost the same bearing,
-     so a compass/tolerance would highlight both.
-
-  2. **By compass direction** (legacy, still supported): give a compass string
-     (`'N'`, `'NE'`, `'E'`, `'SE'`, `'S'`, `'SW'`, `'W'`, `'NW'`) or degrees
-     (`0`–`360`). A departure counts as "in the right direction" when the
-     bearing from the stop to the (dynamically resolved) destination is within
-     a tolerance (default 65°). For tricky stops narrow it with the object form:
-
-     ```ts
-     directions: { 1: 'E', 2: { to: 'NE', tol: 40 } }
-     ```
-
-  When a direction is configured for a line, only departures matching **both**
-  the line and the direction are highlighted — even if it is the only line at
-  the stop.
+  The match is case-insensitive and matches the departure's destination exactly
+  (after collapsing whitespace). When a direction is configured for a line, only
+  departures matching **both** the line and a destination are highlighted — even
+  if it is the only line at the stop. The `+` modal always stores the
+  destinations you tick.
 
 ## Line colours
 
@@ -123,7 +106,7 @@ src/
   pages/
     index.astro           # UI shell
     api/
-      departures.ts       # SSR endpoint: departures + bearings
+      departures.ts       # SSR endpoint: departures
       search-stop.ts      # SSR endpoint: stop search (for the + modal)
       stop-lines.ts       # SSR endpoint: lines & destinations at a stop
   components/

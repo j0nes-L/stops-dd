@@ -404,12 +404,7 @@ function boot() {
     }
 
     try {
-      const params = new URLSearchParams({ stopId: stop.id });
-      const anyStop = stop as Stop & { _userAdded?: boolean };
-      if (anyStop._userAdded && Array.isArray(stop.coords)) {
-        params.set('coords', `${stop.coords[0]},${stop.coords[1]}`);
-      }
-      const res = await fetch(`/api/departures?${params.toString()}`);
+      const res = await fetch(`/api/departures?stopId=${encodeURIComponent(stop.id)}`);
       const data: DeparturesResponse = await res.json();
       cache[stop.id] = { data, time: Date.now() };
       renderSlide(slide, data, stop, {

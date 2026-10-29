@@ -41,11 +41,6 @@ function escapeHtml(s: string): string {
   );
 }
 
-function angDiff(a: number, b: number): number {
-  const d = Math.abs(a - b) % 360;
-  return d > 180 ? 360 - d : d;
-}
-
 function normDest(s: unknown): string {
   return String(s ?? '')
     .trim()
@@ -242,9 +237,9 @@ export function initAddStopModal(deps: AddStopModalDeps): AddStopModalApi {
       const destList = group.querySelector('.dest-list')!;
       for (const d of l.destinations) {
         const item = document.createElement('label');
-        item.className = 'dest-item' + (d.bearing == null ? ' no-bearing' : '');
+        item.className = 'dest-item';
         item.innerHTML =
-          `<input type="checkbox" data-line="${escapeHtml(String(l.line))}" data-dest="${escapeHtml(d.name)}" data-bearing="${d.bearing == null ? '' : d.bearing}" />` +
+          `<input type="checkbox" data-line="${escapeHtml(String(l.line))}" data-dest="${escapeHtml(d.name)}" />` +
           `<span class="dest-item-label">${escapeHtml(d.name)}</span>`;
         destList.appendChild(item);
       }
@@ -256,20 +251,15 @@ export function initAddStopModal(deps: AddStopModalDeps): AddStopModalApi {
     if (!modalSelectedStop) return null;
 
     const linesOfInterest: (string | number)[] = [];
-    const directions: Record<string, { dest: string[] }> = {};
+    const directions: Record<string, DirSpec> = {};
 
     interface LineEntry {
       line: string | number;
-      total: number;
       checkedDests: string[];
     }
     const grouped = new Map<string, LineEntry>();
     for (const l of modalLines) {
-      grouped.set(String(l.line), {
-        line: l.line,
-        total: l.destinations.length,
-        checkedDests: [],
-      });
+      grouped.set(String(l.line), { line: l.line, checkedDests: [] });
     }
     const checkboxes = addLinesList.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
     checkboxes.forEach((cb) => {
@@ -284,9 +274,19 @@ export function initAddStopModal(deps: AddStopModalDeps): AddStopModalApi {
     for (const entry of grouped.values()) {
       if (entry.checkedDests.length === 0) continue;
       linesOfInterest.push(entry.line);
-      // Only restrict to specific destinations when the user picked a subset.
-      if (entry.checkedDests.length >= entry.total) continue;
+      // Always store the picked destinations, so other ones showing up later stay unhighlighted.
       directions[String(entry.line)] = { dest: entry.checkedDests };
+    }
+
+    // Keep saved lines missing from the list (lines failed to load or aren't running right now).
+    if (editingStop) {
+      const shown = new Set(modalLines.map((l) => String(l.line)));
+      for (const l of editingStop.linesOfInterest ?? []) {
+        if (shown.has(String(l))) continue;
+        linesOfInterest.push(l);
+        const spec = editingStop.directions?.[String(l)];
+        if (spec) directions[String(l)] = spec;
+      }
     }
 
     const stop: Stop = {
@@ -348,32 +348,13 @@ export function initAddStopModal(deps: AddStopModalDeps): AddStopModalApi {
       const line = cb.dataset.line ?? '';
       if (!loi.has(line)) return;
       const dirSpec = dirs[line];
-      if (dirSpec == null) {
+      if (dirSpec == null || typeof dirSpec !== 'object' || !('dest' in dirSpec)) {
         cb.checked = true;
         return;
       }
-      // New destination-name based spec.
-      if (typeof dirSpec === 'object' && dirSpec !== null && 'dest' in dirSpec) {
-        const raw = Array.isArray(dirSpec.dest) ? dirSpec.dest : [dirSpec.dest];
-        const wanted = new Set(raw.map(normDest).filter((s) => s.length > 0));
-        const dest = normDest(cb.dataset.dest ?? '');
-        if (wanted.has(dest)) cb.checked = true;
-        return;
-      }
-      // Legacy bearing-based spec.
-      const b = cb.dataset.bearing;
-      if (b === '' || b == null) return;
-      const bearing = Number(b);
-      let to: number;
-      let tol = 65;
-      if (typeof dirSpec === 'object') {
-        to = Number(dirSpec.to);
-        if (typeof dirSpec.tol === 'number') tol = dirSpec.tol;
-      } else {
-        to = Number(dirSpec);
-      }
-      if (Number.isNaN(to)) return;
-      if (angDiff(bearing, to) <= tol) cb.checked = true;
+      const raw = Array.isArray(dirSpec.dest) ? dirSpec.dest : [dirSpec.dest];
+      const wanted = new Set(raw.map(normDest).filter((s) => s.length > 0));
+      if (wanted.has(normDest(cb.dataset.dest ?? ''))) cb.checked = true;
     });
   }
 

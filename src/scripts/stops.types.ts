@@ -1,8 +1,4 @@
-export type DirSpec =
-  | string
-  | number
-  | { to: string | number; tol?: number }
-  | { dest: string | string[] };
+export type DirSpec = { dest: string | string[] };
 
 export interface Stop {
   id: string;
